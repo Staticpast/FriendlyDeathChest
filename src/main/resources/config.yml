@@ -1,0 +1,4 @@
+# The radius to search for a valid chest location (default: 1)
+# A radius of 1 will search in a 3x3x3 area
+# A radius of 2 will search in a 5x5x5 area
+search-radius: 1 
