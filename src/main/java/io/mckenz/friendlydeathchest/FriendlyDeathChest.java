@@ -17,6 +17,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.Color;
 import org.bukkit.Effect;
+import org.bukkit.event.block.BlockBreakEvent;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
     private String signLine1;
     private String signLine2;
     private String signLine3;
+    private String messageSignProtected;
 
     @Override
     public void onEnable() {
@@ -53,6 +55,8 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
             "§6[FriendlyDeathChest] Your items are safe in a chest at: §e%d, %d, %d");
         messageChestRemoved = getConfig().getString("messages.chest-removed", 
             "§6[FriendlyDeathChest] Chest removed as it is now empty.");
+        messageSignProtected = getConfig().getString("messages.sign-protected",
+            "§c[FriendlyDeathChest] Cannot remove sign while chest contains items!");
             
         // Load sign text
         signLine1 = getConfig().getString("sign.line1", "Death Chest");
@@ -69,10 +73,32 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         Location deathLocation = player.getLocation();
-        List<ItemStack> drops = new ArrayList<>(event.getDrops()); // Create a copy of the drops
+        
+        // Collect all items including armor and off-hand
+        List<ItemStack> allItems = new ArrayList<>(event.getDrops()); // Regular drops
+        
+        // Add armor contents if keep inventory is false
+        if (!event.getKeepInventory()) {
+            ItemStack[] armorContents = player.getInventory().getArmorContents();
+            for (ItemStack armor : armorContents) {
+                if (armor != null && armor.getType() != Material.AIR) {
+                    allItems.add(armor);
+                }
+            }
+            
+            // Add off-hand item
+            ItemStack offHand = player.getInventory().getItemInOffHand();
+            if (offHand != null && offHand.getType() != Material.AIR) {
+                allItems.add(offHand);
+            }
+            
+            // Clear armor and off-hand to prevent double drops
+            player.getInventory().setArmorContents(new ItemStack[4]);
+            player.getInventory().setItemInOffHand(null);
+        }
 
         // Don't do anything if there are no items to store
-        if (drops.isEmpty()) {
+        if (allItems.isEmpty()) {
             return;
         }
 
@@ -81,6 +107,9 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         if (chestBlock == null) {
             // If no suitable location found, let items drop normally
             player.sendMessage(messageNoChest);
+            // Restore items to drops list
+            event.getDrops().clear();
+            event.getDrops().addAll(allItems);
             return;
         }
 
@@ -98,9 +127,9 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
             sign.update();
         }
         
-        // Clear the drops and add them to chest
+        // Clear the drops and add all items to chest
         event.getDrops().clear();
-        for (ItemStack item : drops) {
+        for (ItemStack item : allItems) {
             if (item != null) {
                 chest.getInventory().addItem(item);
             }
@@ -164,6 +193,35 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
                     ((Player) event.getPlayer()).sendMessage(messageChestRemoved);
                 }
             });
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        
+        // Handle chest break
+        if (block.getType() == Material.CHEST) {
+            Block signBlock = block.getRelative(0, 1, 0);
+            if (signBlock.getType() == Material.OAK_SIGN) {
+                // Remove sign without dropping it
+                signBlock.setType(Material.AIR, false);
+            }
+        }
+        
+        // Handle sign break
+        if (block.getType() == Material.OAK_SIGN) {
+            Block chestBlock = block.getRelative(0, -1, 0);
+            if (chestBlock.getType() == Material.CHEST) {
+                Chest chest = (Chest) chestBlock.getState();
+                if (!chest.getInventory().isEmpty()) {
+                    // Cancel sign breaking if chest still has items
+                    event.setCancelled(true);
+                    if (event.getPlayer() instanceof Player) {
+                        ((Player) event.getPlayer()).sendMessage(messageSignProtected);
+                    }
+                }
+            }
         }
     }
 

@@ -8,6 +8,7 @@ messages:
   no-chest-location: "§c[FriendlyDeathChest] Could not create a chest. Items dropped normally."
   chest-created: "§6[FriendlyDeathChest] Your items are safe in a chest at: §e%d, %d, %d"
   chest-removed: "§6[FriendlyDeathChest] Chest removed as it is now empty."
+  sign-protected: "§c[FriendlyDeathChest] Cannot remove sign while chest contains items!"
 
 # Sign text (3 lines)
 sign:
