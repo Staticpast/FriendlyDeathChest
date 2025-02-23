@@ -22,18 +22,42 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class FriendlyDeathChest extends JavaPlugin implements Listener {
-    private int searchRadius = 1; // Default radius
+    private int searchRadius = 1;
+    private String messageNoChest;
+    private String messageChestCreated;
+    private String messageChestRemoved;
+    private String signLine1;
+    private String signLine2;
+    private String signLine3;
 
     @Override
     public void onEnable() {
         // Save default config if it doesn't exist
         saveDefaultConfig();
         
-        // Load search radius from config
-        searchRadius = getConfig().getInt("search-radius", 1);
+        // Load configuration
+        loadConfig();
         
         getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("FriendlyDeathChest has been enabled!");
+    }
+
+    private void loadConfig() {
+        // Load search radius
+        searchRadius = getConfig().getInt("search-radius", 1);
+        
+        // Load messages
+        messageNoChest = getConfig().getString("messages.no-chest-location", 
+            "§c[FriendlyDeathChest] Could not create a chest. Items dropped normally.");
+        messageChestCreated = getConfig().getString("messages.chest-created", 
+            "§6[FriendlyDeathChest] Your items are safe in a chest at: §e%d, %d, %d");
+        messageChestRemoved = getConfig().getString("messages.chest-removed", 
+            "§6[FriendlyDeathChest] Chest removed as it is now empty.");
+            
+        // Load sign text
+        signLine1 = getConfig().getString("sign.line1", "Death Chest");
+        signLine2 = getConfig().getString("sign.line2", "%s");
+        signLine3 = getConfig().getString("sign.line3", "Rest in peace");
     }
 
     @Override
@@ -56,7 +80,7 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         Block chestBlock = findSuitableLocation(deathLocation);
         if (chestBlock == null) {
             // If no suitable location found, let items drop normally
-            player.sendMessage("§c[FriendlyDeathChest] Could not create a chest. Items dropped normally.");
+            player.sendMessage(messageNoChest);
             return;
         }
 
@@ -64,13 +88,13 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         chestBlock.setType(Material.CHEST);
         Chest chest = (Chest) chestBlock.getState();
         
-        // Add sign on top of chest
+        // Add sign on top of chest with custom text
         Block signBlock = chestBlock.getRelative(0, 1, 0);
         signBlock.setType(Material.OAK_SIGN);
         if (signBlock.getState() instanceof org.bukkit.block.Sign sign) {
-            sign.setLine(0, "Death Chest");
-            sign.setLine(1, player.getName());
-            sign.setLine(2, "Rest in peace");
+            sign.setLine(0, signLine1);
+            sign.setLine(1, String.format(signLine2, player.getName()));
+            sign.setLine(2, signLine3);
             sign.update();
         }
         
@@ -88,8 +112,8 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         chestLoc.getWorld().playSound(chestLoc, Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.0f);
         chestLoc.getWorld().playSound(chestLoc, Sound.BLOCK_CHEST_CLOSE, 1.0f, 0.5f);
 
-        // Send coordinates message to player
-        String message = String.format("§6[FriendlyDeathChest] Your items are safe in a chest at: §e%d, %d, %d",
+        // Send custom coordinates message to player
+        String message = String.format(messageChestCreated,
                 chestBlock.getX(), chestBlock.getY(), chestBlock.getZ());
         player.sendMessage(message);
     }
@@ -132,12 +156,12 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
                 // Remove sign first without dropping it
                 Block signBlock = chest.getBlock().getRelative(0, 1, 0);
                 if (signBlock.getType() == Material.OAK_SIGN) {
-                    signBlock.setType(Material.AIR, false); // false means don't drop items
+                    signBlock.setType(Material.AIR, false);
                 }
                 // Then remove chest without dropping it
                 chest.getBlock().setType(Material.AIR, false);
                 if (event.getPlayer() instanceof Player) {
-                    ((Player) event.getPlayer()).sendMessage("§6[FriendlyDeathChest] Chest removed as it is now empty.");
+                    ((Player) event.getPlayer()).sendMessage(messageChestRemoved);
                 }
             });
         }

@@ -1,4 +1,16 @@
 # The radius to search for a valid chest location (default: 1)
 # A radius of 1 will search in a 3x3x3 area
 # A radius of 2 will search in a 5x5x5 area
-search-radius: 1 
+search-radius: 1
+
+# Chat messages (supports color codes with §)
+messages:
+  no-chest-location: "§c[FriendlyDeathChest] Could not create a chest. Items dropped normally."
+  chest-created: "§6[FriendlyDeathChest] Your items are safe in a chest at: §e%d, %d, %d"
+  chest-removed: "§6[FriendlyDeathChest] Chest removed as it is now empty."
+
+# Sign text (3 lines)
+sign:
+  line1: "Death Chest"
+  line2: "%s" # Player name placeholder
+  line3: "Rest in peace" 
