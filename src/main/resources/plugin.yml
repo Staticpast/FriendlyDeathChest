@@ -1,5 +1,5 @@
 name: FriendlyDeathChest
-version: '${project.version}'
+version: 1.0.0
 main: io.mckenz.friendlydeathchest.FriendlyDeathChest
 api-version: '1.21'
 author: McKenzieJDan
