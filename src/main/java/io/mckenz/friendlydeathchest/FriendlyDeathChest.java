@@ -64,10 +64,15 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         chestBlock.setType(Material.CHEST);
         Chest chest = (Chest) chestBlock.getState();
         
-        // Add sign on top of chest
-        Block signBlock = chestBlock.getRelative(0, 1, 0);
-        signBlock.setType(Material.OAK_SIGN);
+        // Add wall sign on the chest
+        Block signBlock = chestBlock;
+        signBlock.setType(Material.OAK_WALL_SIGN);
         if (signBlock.getState() instanceof org.bukkit.block.Sign sign) {
+            org.bukkit.block.data.type.WallSign wallSign = (org.bukkit.block.data.type.WallSign) sign.getBlockData();
+            // Face the sign opposite to the player's direction
+            wallSign.setFacing(player.getFacing().getOppositeFace());
+            sign.setBlockData(wallSign);
+            
             sign.setLine(0, "Death Chest");
             sign.setLine(1, player.getName());
             sign.setLine(2, "Rest in peace");
@@ -127,14 +132,8 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
             chestLoc.getWorld().spawnParticle(Particle.PORTAL, chestLoc, 20, 0.2, 0.2, 0.2, 0.5);
             chestLoc.getWorld().playSound(chestLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 1.2f);
 
-            // Schedule the chest and sign removal
+            // Schedule the chest removal (sign will be removed automatically as it's attached to the chest)
             getServer().getScheduler().runTask(this, () -> {
-                // Remove sign first
-                Block signBlock = chest.getBlock().getRelative(0, 1, 0);
-                if (signBlock.getType() == Material.OAK_SIGN) {
-                    signBlock.setType(Material.AIR);
-                }
-                // Then remove chest
                 chest.getBlock().setType(Material.AIR);
                 if (event.getPlayer() instanceof Player) {
                     ((Player) event.getPlayer()).sendMessage("§6[FriendlyDeathChest] Chest removed as it is now empty.");
@@ -168,7 +167,6 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
 
     private boolean isValidChestLocation(Block block) {
         return block.getType() == Material.AIR &&
-               block.getRelative(0, -1, 0).getType().isSolid() &&
-               block.getRelative(0, 1, 0).getType() == Material.AIR; // Make sure there's space for the sign
+               block.getRelative(0, -1, 0).getType().isSolid();
     }
 } 
