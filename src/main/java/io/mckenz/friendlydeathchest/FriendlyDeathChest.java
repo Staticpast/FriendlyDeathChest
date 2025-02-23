@@ -64,6 +64,16 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         chestBlock.setType(Material.CHEST);
         Chest chest = (Chest) chestBlock.getState();
         
+        // Add sign on top of chest
+        Block signBlock = chestBlock.getRelative(0, 1, 0);
+        signBlock.setType(Material.OAK_SIGN);
+        if (signBlock.getState() instanceof org.bukkit.block.Sign sign) {
+            sign.setLine(0, "Death Chest");
+            sign.setLine(1, player.getName());
+            sign.setLine(2, "Rest in peace");
+            sign.update();
+        }
+        
         // Clear the drops and add them to chest
         event.getDrops().clear();
         for (ItemStack item : drops) {
@@ -117,8 +127,14 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
             chestLoc.getWorld().spawnParticle(Particle.PORTAL, chestLoc, 20, 0.2, 0.2, 0.2, 0.5);
             chestLoc.getWorld().playSound(chestLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 1.2f);
 
-            // Schedule the chest removal
+            // Schedule the chest and sign removal
             getServer().getScheduler().runTask(this, () -> {
+                // Remove sign first
+                Block signBlock = chest.getBlock().getRelative(0, 1, 0);
+                if (signBlock.getType() == Material.OAK_SIGN) {
+                    signBlock.setType(Material.AIR);
+                }
+                // Then remove chest
                 chest.getBlock().setType(Material.AIR);
                 if (event.getPlayer() instanceof Player) {
                     ((Player) event.getPlayer()).sendMessage("§6[FriendlyDeathChest] Chest removed as it is now empty.");
@@ -152,6 +168,7 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
 
     private boolean isValidChestLocation(Block block) {
         return block.getType() == Material.AIR &&
-               block.getRelative(0, -1, 0).getType().isSolid();
+               block.getRelative(0, -1, 0).getType().isSolid() &&
+               block.getRelative(0, 1, 0).getType() == Material.AIR; // Make sure there's space for the sign
     }
 } 
