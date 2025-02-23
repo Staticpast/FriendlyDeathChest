@@ -13,7 +13,7 @@ A Minecraft Spigot plugin that creates a chest containing your items when you di
 
 ## Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/McKenzieJDan/Tree-Maintainer/releases)
+1. Download the latest release from [GitHub Releases](https://github.com/McKenzieJDan/FriendlyDeathChest/releases)
 2. Place the .jar in your server's `plugins` folder
 3. Restart your server
 
