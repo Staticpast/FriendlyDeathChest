@@ -19,6 +19,7 @@ import org.bukkit.Color;
 import org.bukkit.Effect;
 
 import java.util.List;
+import java.util.ArrayList;
 
 public class FriendlyDeathChest extends JavaPlugin implements Listener {
     private int searchRadius = 1; // Default radius
@@ -44,21 +45,17 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         Location deathLocation = player.getLocation();
-        List<ItemStack> drops = event.getDrops();
+        List<ItemStack> drops = new ArrayList<>(event.getDrops()); // Create a copy of the drops
 
         // Don't do anything if there are no items to store
         if (drops.isEmpty()) {
             return;
         }
 
-        // Clear the drops so they don't scatter on the ground
-        event.getDrops().clear();
-
         // Find a suitable location for the chest
         Block chestBlock = findSuitableLocation(deathLocation);
         if (chestBlock == null) {
-            // If no suitable location found, drop items normally
-            drops.forEach(item -> deathLocation.getWorld().dropItemNaturally(deathLocation, item));
+            // If no suitable location found, let items drop normally
             player.sendMessage("§c[FriendlyDeathChest] Could not create a chest. Items dropped normally.");
             return;
         }
@@ -66,7 +63,14 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         // Place and fill the chest
         chestBlock.setType(Material.CHEST);
         Chest chest = (Chest) chestBlock.getState();
-        drops.forEach(item -> chest.getInventory().addItem(item));
+        
+        // Clear the drops and add them to chest
+        event.getDrops().clear();
+        for (ItemStack item : drops) {
+            if (item != null) {
+                chest.getInventory().addItem(item);
+            }
+        }
 
         // Play creation effects
         Location chestLoc = chestBlock.getLocation().add(0.5, 0.5, 0.5);
