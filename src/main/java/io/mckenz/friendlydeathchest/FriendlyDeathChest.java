@@ -102,6 +102,14 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
             return;
         }
 
+        // Count total non-null items
+        int itemCount = (int) allItems.stream()
+            .filter(item -> item != null && item.getType() != Material.AIR)
+            .count();
+
+        // Determine if we need a double chest (27 slots in single, 54 in double)
+        boolean needsDoubleChest = itemCount > 27;
+
         // Find a suitable location for the chest
         Block chestBlock = findSuitableLocation(deathLocation);
         if (chestBlock == null) {
@@ -115,6 +123,17 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
 
         // Place and fill the chest
         chestBlock.setType(Material.CHEST);
+        if (needsDoubleChest) {
+            // Find adjacent block for double chest
+            Block secondChestBlock = findAdjacentSpace(chestBlock);
+            if (secondChestBlock != null) {
+                secondChestBlock.setType(Material.CHEST);
+            } else {
+                // If we can't make a double chest, items might be lost
+                getLogger().warning("Could not create double chest - some items might be lost!");
+            }
+        }
+
         Chest chest = (Chest) chestBlock.getState();
         
         // Add sign on top of chest with custom text
@@ -248,9 +267,35 @@ public class FriendlyDeathChest extends JavaPlugin implements Listener {
         return null;
     }
 
+    private Block findAdjacentSpace(Block block) {
+        // Check all four sides
+        Block[] adjacentBlocks = {
+            block.getRelative(1, 0, 0),
+            block.getRelative(-1, 0, 0),
+            block.getRelative(0, 0, 1),
+            block.getRelative(0, 0, -1)
+        };
+
+        for (Block adjacent : adjacentBlocks) {
+            if (adjacent.getType() == Material.AIR && 
+                adjacent.getRelative(0, -1, 0).getType().isSolid() &&
+                adjacent.getRelative(0, 1, 0).getType() == Material.AIR) {
+                return adjacent;
+            }
+        }
+        return null;
+    }
+
     private boolean isValidChestLocation(Block block) {
-        return block.getType() == Material.AIR &&
-               block.getRelative(0, -1, 0).getType().isSolid() &&
-               block.getRelative(0, 1, 0).getType() == Material.AIR; // Make sure there's space for the sign
+        // Check the main chest location
+        if (!(block.getType() == Material.AIR &&
+            block.getRelative(0, -1, 0).getType().isSolid() &&
+            block.getRelative(0, 1, 0).getType() == Material.AIR)) {
+            return false;
+        }
+
+        // If we might need a double chest, check if at least one adjacent space is available
+        Block adjacent = findAdjacentSpace(block);
+        return adjacent != null;
     }
 } 
