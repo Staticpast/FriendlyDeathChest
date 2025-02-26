@@ -1,17 +1,129 @@
-# The radius to search for a valid chest location (default: 1)
+# ======================================
+# FriendlyDeathChest Configuration
+# ======================================
+# Plugin Version: ${project.version}
+# 
+# This configuration file controls all aspects of the FriendlyDeathChest plugin.
+# For support or questions, visit: https://github.com/McKenzieJDan/FriendlyDeathChest
+
+# ======================================
+# General Settings
+# ======================================
+
+# Master switch to enable or disable the plugin
+enabled: true
+
+# ======================================
+# Death Chest Settings
+# ======================================
+
+# Whether to create a chest when a player dies
+create-chest: true
+
+# How long (in minutes) the death chest should remain before automatically removing
+# Set to -1 for no time limit (chest stays until broken or items are collected)
+chest-lifetime: 15
+
+# What to do when a chest would be created in an invalid location
+# Options: NORMAL_DROP (items drop normally), CLOSEST_VALID (find nearest valid location)
+invalid-location-behavior: CLOSEST_VALID
+
+# Maximum search radius (in blocks) when looking for a valid chest location
+# Only applies when invalid-location-behavior is set to CLOSEST_VALID
+max-search-radius: 10
+
+# Should the chest be protected from other players?
+# If true, only the owner can open the chest
+protect-chest: true
+
+# Should the chest be named with player's name?
+named-chest: true
+
+# ======================================
+# Hologram Settings
+# ======================================
+
+# Whether to show a hologram above the death chest
+enable-hologram: true
+
+# Text to display on the hologram
+# Available placeholders:
+# {player} - The player's name
+# {time} - Time remaining until the chest disappears
+hologram-text: "&c{player}'s Death Chest"
+
+# Whether to show the remaining time on the hologram
+show-time-remaining: true
+
+# ======================================
+# Sign Settings
+# ======================================
+
+# Whether to place a sign on the death chest
+enable-sign: true
+
+# Text to display on the sign (3 lines)
+sign:
+  line1: "Death Chest"
+  line2: "{player}"
+  line3: "Rest in peace"
+
+# ======================================
+# Item Handling
+# ======================================
+
+# What to do if all items don't fit in a single chest
+# Options: DOUBLE_CHEST (create a double chest if needed), DROP_EXTRA (drop items that don't fit)
+overflow-behavior: DOUBLE_CHEST
+
+# Whether to keep experience when a player dies
+# If true, experience will be stored in the chest and given back when opened
+store-experience: true
+
+# Items that should NOT be stored in the death chest (will drop normally)
+# Example: minecraft:diamond_sword, minecraft:netherite_helmet
+excluded-items: []
+
+# ======================================
+# Notification Settings
+# ======================================
+
+# Message to send to player when they die and a chest is created
+# Leave blank to disable
+death-message: "&cYour items have been stored in a chest at &f{x}, {y}, {z}"
+
+# Message to send to player when their chest is about to expire
+# Leave blank to disable
+expiry-warning-message: "&eYour death chest at &f{x}, {y}, {z} &ewill disappear in &f{time} minutes&e!"
+
+# How many minutes before expiry to send the warning message
+expiry-warning-time: 5
+
+# Message to send when all items are collected from the chest
+# Leave blank to disable
+collection-message: "&aYou have collected all items from your death chest!"
+
+# Additional messages
+messages:
+  no-valid-location: "&c[FriendlyDeathChest] Could not create a chest. Items dropped normally."
+  sign-protected: "&c[FriendlyDeathChest] Cannot remove sign while chest contains items!"
+
+# ======================================
+# Advanced Settings
+# ======================================
+
+# Should the plugin store chest locations in a database for persistence across server restarts?
+persistent-storage: true
+
+# Should the plugin integrate with other protection plugins?
+# If true, chest creation will consider protected regions
+respect-protection-plugins: true
+
+# Debug mode - when enabled, additional information will be printed to the console
+# Only enable this when troubleshooting issues
+debug: false
+
+# Fine-tuning for initial chest location search (before max-search-radius is used)
 # A radius of 1 will search in a 3x3x3 area
 # A radius of 2 will search in a 5x5x5 area
 search-radius: 1
-
-# Chat messages (supports color codes with §)
-messages:
-  no-chest-location: "§c[FriendlyDeathChest] Could not create a chest. Items dropped normally."
-  chest-created: "§6[FriendlyDeathChest] Your items are safe in a chest at: §e%d, %d, %d"
-  chest-removed: "§6[FriendlyDeathChest] Chest removed as it is now empty."
-  sign-protected: "§c[FriendlyDeathChest] Cannot remove sign while chest contains items!"
-
-# Sign text (3 lines)
-sign:
-  line1: "Death Chest"
-  line2: "%s" # Player name placeholder
-  line3: "Rest in peace" 
