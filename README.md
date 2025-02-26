@@ -2,7 +2,7 @@
 
 A Minecraft Spigot plugin that creates a chest containing your items when you die, instead of scattering them on the ground.
 
-[![SpigotMC](https://img.shields.io/badge/SpigotMC-FirstSpawn-orange)](https://www.spigotmc.org/resources/friendlydeathchest.122819/)
+[![SpigotMC](https://img.shields.io/badge/SpigotMC-FriendlyDeathChest-orange)](https://www.spigotmc.org/resources/friendlydeathchest.122819/)
 [![Donate](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/paypalme/mckenzio)
 
 ## Features
