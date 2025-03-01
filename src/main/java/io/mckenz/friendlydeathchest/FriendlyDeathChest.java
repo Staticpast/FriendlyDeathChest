@@ -7,6 +7,7 @@ import io.mckenz.friendlydeathchest.listeners.PlayerDeathListener;
 import io.mckenz.friendlydeathchest.service.ChestManager;
 import io.mckenz.friendlydeathchest.service.HologramManager;
 import io.mckenz.friendlydeathchest.service.LocationFinder;
+import io.mckenz.friendlydeathchest.utils.UpdateChecker;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -20,6 +21,7 @@ public class FriendlyDeathChest extends JavaPlugin {
     private LocationFinder locationFinder;
     private ChestManager chestManager;
     private HologramManager hologramManager;
+    private UpdateChecker updateChecker;
 
     @Override
     public void onEnable() {
@@ -48,6 +50,18 @@ public class FriendlyDeathChest extends JavaPlugin {
 
         // Register event listeners
         registerEventListeners();
+        
+        // Initialize update checker if enabled
+        if (configManager.isUpdateCheckerEnabled()) {
+            int resourceId = configManager.getUpdateCheckerResourceId();
+            if (resourceId > 0) {
+                updateChecker = new UpdateChecker(this, resourceId, configManager.shouldNotifyAdminsAboutUpdates());
+                updateChecker.checkForUpdates();
+                getLogger().info("Update checker enabled.");
+            } else {
+                getLogger().warning("Update checker is enabled but resource ID is not set or invalid.");
+            }
+        }
 
         // Log debug status
         if (configManager.isDebugEnabled()) {
@@ -116,5 +130,14 @@ public class FriendlyDeathChest extends JavaPlugin {
      */
     public HologramManager getHologramManager() {
         return hologramManager;
+    }
+    
+    /**
+     * Gets the update checker
+     * 
+     * @return The update checker, or null if update checking is disabled
+     */
+    public UpdateChecker getUpdateChecker() {
+        return updateChecker;
     }
 } 

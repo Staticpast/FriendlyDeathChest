@@ -121,9 +121,24 @@ respect-protection-plugins: true
 
 # Debug mode - when enabled, additional information will be printed to the console
 # Only enable this when troubleshooting issues
-debug: false
+debug: true
 
 # Fine-tuning for initial chest location search (before max-search-radius is used)
 # A radius of 1 will search in a 3x3x3 area
 # A radius of 2 will search in a 5x5x5 area
 search-radius: 1
+
+# ======================================
+# Update Checker Settings
+# ======================================
+
+update-checker:
+  # Enable or disable the update checker
+  enabled: true
+
+  # The SpigotMC resource ID for the plugin
+  # https://www.spigotmc.org/resources/friendlydeathchest.XXXXX/
+  resource-id: 0
+  
+  # Whether to notify admins when they join if an update is available
+  notify-admins: true

@@ -4,3 +4,8 @@ main: io.mckenz.friendlydeathchest.FriendlyDeathChest
 api-version: '1.21'
 author: McKenzieJDan
 description: Creates a chest with player's items upon death instead of dropping them 
+
+permissions:
+  friendlydeathchest.admin:
+    description: Allows access to admin features and update notifications
+    default: op 

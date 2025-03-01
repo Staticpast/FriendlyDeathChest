@@ -54,6 +54,11 @@ public class ConfigManager {
     private boolean respectProtectionPlugins;
     private boolean debug;
     
+    // Update checker settings
+    private boolean updateCheckerEnabled;
+    private int updateCheckerResourceId;
+    private boolean updateCheckerNotifyAdmins;
+    
     /**
      * Creates a new ConfigManager instance
      * 
@@ -131,6 +136,11 @@ public class ConfigManager {
         persistentStorage = config.getBoolean("persistent-storage", true);
         respectProtectionPlugins = config.getBoolean("respect-protection-plugins", true);
         debug = config.getBoolean("debug", false);
+        
+        // Load update checker settings
+        updateCheckerEnabled = config.getBoolean("update-checker.enabled", true);
+        updateCheckerResourceId = config.getInt("update-checker.resource-id", 0);
+        updateCheckerNotifyAdmins = config.getBoolean("update-checker.notify-admins", true);
         
         // Log debug information if enabled
         if (debug) {
@@ -257,6 +267,33 @@ public class ConfigManager {
     
     public boolean isDebugEnabled() {
         return debug;
+    }
+    
+    /**
+     * Gets whether the update checker is enabled
+     * 
+     * @return true if the update checker is enabled
+     */
+    public boolean isUpdateCheckerEnabled() {
+        return updateCheckerEnabled;
+    }
+    
+    /**
+     * Gets the SpigotMC resource ID for the update checker
+     * 
+     * @return the resource ID
+     */
+    public int getUpdateCheckerResourceId() {
+        return updateCheckerResourceId;
+    }
+    
+    /**
+     * Gets whether to notify admins about updates
+     * 
+     * @return true if admins should be notified
+     */
+    public boolean shouldNotifyAdminsAboutUpdates() {
+        return updateCheckerNotifyAdmins;
     }
     
     /**
