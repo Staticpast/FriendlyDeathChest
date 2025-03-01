@@ -5,6 +5,12 @@ api-version: '1.21'
 author: McKenzieJDan
 description: Creates a chest with player's items upon death instead of dropping them 
 
+commands:
+  fdc:
+    description: Main command for FriendlyDeathChest
+    usage: /<command> [help|reload|update]
+    aliases: [friendlydeathchest]
+
 permissions:
   friendlydeathchest.admin:
     description: Allows access to admin features and update notifications

@@ -1,5 +1,6 @@
 package io.mckenz.friendlydeathchest;
 
+import io.mckenz.friendlydeathchest.commands.FDCCommand;
 import io.mckenz.friendlydeathchest.config.ConfigManager;
 import io.mckenz.friendlydeathchest.listeners.BlockListener;
 import io.mckenz.friendlydeathchest.listeners.InventoryListener;
@@ -50,6 +51,9 @@ public class FriendlyDeathChest extends JavaPlugin {
 
         // Register event listeners
         registerEventListeners();
+        
+        // Register commands
+        registerCommands();
         
         // Initialize update checker if enabled
         if (configManager.isUpdateCheckerEnabled()) {
@@ -112,6 +116,17 @@ public class FriendlyDeathChest extends JavaPlugin {
             pm.registerEvents(blockListener, this);
             getLogger().info("Death chest protection enabled.");
         }
+    }
+    
+    /**
+     * Registers all commands
+     */
+    private void registerCommands() {
+        FDCCommand fdcCommand = new FDCCommand(this, configManager);
+        getCommand("fdc").setExecutor(fdcCommand);
+        getCommand("fdc").setTabCompleter(fdcCommand);
+        
+        getLogger().info("Commands registered.");
     }
 
     /**
