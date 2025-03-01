@@ -2,6 +2,7 @@ package io.mckenz.friendlydeathchest.config;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Material;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -34,6 +35,8 @@ public class ConfigManager {
     private String signLine1;
     private String signLine2;
     private String signLine3;
+    private String signLine4;
+    private String signMaterial;
     
     // Item handling settings
     private String overflowBehavior;
@@ -109,6 +112,18 @@ public class ConfigManager {
         signLine1 = config.getString("sign.line1", "Death Chest");
         signLine2 = config.getString("sign.line2", "{player}");
         signLine3 = config.getString("sign.line3", "Rest in peace");
+        signLine4 = config.getString("sign.line4", "");
+        
+        // Load sign material (added in v1.0.4)
+        String configSignMaterial = config.getString("sign-material", "OAK");
+        // Validate the material
+        try {
+            Material.valueOf(configSignMaterial + "_WALL_SIGN");
+            signMaterial = configSignMaterial;
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Invalid sign material: " + configSignMaterial + ". Using OAK instead.");
+            signMaterial = "OAK";
+        }
         
         // Load item handling settings
         overflowBehavior = config.getString("overflow-behavior", "DOUBLE_CHEST");
@@ -122,14 +137,14 @@ public class ConfigManager {
         messageNoValidLocation = config.getString("messages.no-valid-location", 
             "&c[FriendlyDeathChest] Could not create a chest. Items dropped normally.");
         deathMessage = config.getString("death-message", 
-            "&cYour items have been stored in a chest at &f{x}, {y}, {z}");
+            "&c[FriendlyDeathChest] &fYour items have been stored in a chest at &e{location}");
         collectionMessage = config.getString("collection-message", 
             "&aYou have collected all items from your death chest!");
         messageSignProtected = config.getString("messages.sign-protected",
             "&c[FriendlyDeathChest] Cannot remove sign while chest contains items!");
         messageNoPermission = "&c[FriendlyDeathChest] This is not your death chest!";
         messageExpiryWarning = config.getString("expiry-warning-message", 
-            "&eYour death chest at &f{x}, {y}, {z} &ewill disappear in &f{time} minutes&e!");
+            "&eYour death chest at &f{location} &ewill disappear in &f{time}&e!");
         expiryWarningTime = config.getInt("expiry-warning-time", 5);
         
         // Load advanced settings
@@ -210,6 +225,10 @@ public class ConfigManager {
     
     public String getSignLine3() {
         return signLine3;
+    }
+    
+    public String getSignLine4() {
+        return signLine4;
     }
     
     public String getOverflowBehavior() {
@@ -347,7 +366,7 @@ public class ConfigManager {
      * @return Array of sign text lines
      */
     public String[] getSignText() {
-        return new String[]{signLine1, signLine2, signLine3, ""};
+        return new String[]{signLine1, signLine2, signLine3, signLine4};
     }
     
     /**
@@ -357,5 +376,14 @@ public class ConfigManager {
      */
     public String getExpiryWarningMessage() {
         return messageExpiryWarning;
+    }
+    
+    /**
+     * Gets the sign material type (without the _WALL_SIGN suffix)
+     * 
+     * @return The sign material type (e.g., "OAK", "SPRUCE", etc.)
+     */
+    public String getSignMaterial() {
+        return signMaterial;
     }
 } 

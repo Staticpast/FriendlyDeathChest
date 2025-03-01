@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.bukkit.block.BlockFace;
 import org.bukkit.World;
+import org.bukkit.ChatColor;
 
 /**
  * Manages death chest creation, tracking, and cleanup
@@ -214,10 +215,11 @@ public class ChestManager {
         
         // Send custom coordinates message to player
         String message = config.getMessageChestCreated()
+            .replace("{location}", formatLocation(chestBlock.getLocation()))
             .replace("{x}", String.valueOf(chestBlock.getX()))
             .replace("{y}", String.valueOf(chestBlock.getY()))
             .replace("{z}", String.valueOf(chestBlock.getZ()));
-        player.sendMessage(message);
+        player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
         
         return leftoverItems;
     }
@@ -240,11 +242,83 @@ public class ChestManager {
         chestLoc.getWorld().spawnParticle(Particle.PORTAL, chestLoc, 20, 0.2, 0.2, 0.2, 0.5);
         chestLoc.getWorld().playSound(chestLoc, Sound.ENTITY_ENDERMAN_TELEPORT, 0.7f, 1.2f);
         
-        // Remove sign first without dropping it
+        // Remove hologram if enabled
+        if (config.isHologramEnabled()) {
+            try {
+                // Try to get the HologramManager from the main plugin class
+                if (plugin instanceof io.mckenz.friendlydeathchest.FriendlyDeathChest) {
+                    io.mckenz.friendlydeathchest.FriendlyDeathChest mainPlugin = 
+                        (io.mckenz.friendlydeathchest.FriendlyDeathChest) plugin;
+                    
+                    HologramManager hologramManager = mainPlugin.getHologramManager();
+                    if (hologramManager != null) {
+                        hologramManager.removeHologram(chestBlock.getLocation());
+                        if (config.isDebugEnabled()) {
+                            plugin.getLogger().info("Removed hologram at " + chestBlock.getLocation());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                if (config.isDebugEnabled()) {
+                    plugin.getLogger().warning("Failed to remove hologram: " + e.getMessage());
+                }
+            }
+        }
+        
+        // Remove sign if enabled
         if (config.isSignEnabled()) {
-            Block signBlock = chestBlock.getRelative(0, 1, 0);
-            if (signBlock.getType() == Material.OAK_SIGN) {
-                signBlock.setType(Material.AIR, false);
+            // First try to determine the chest's facing direction
+            BlockFace chestFacing = null;
+            if (chestBlock.getBlockData() instanceof org.bukkit.block.data.Directional) {
+                chestFacing = ((org.bukkit.block.data.Directional) chestBlock.getBlockData()).getFacing();
+                
+                // Check the block in front of the chest for a sign
+                Block frontBlock = chestBlock.getRelative(chestFacing);
+                if (isWallSign(frontBlock)) {
+                    org.bukkit.block.data.type.WallSign signData = 
+                        (org.bukkit.block.data.type.WallSign) frontBlock.getBlockData();
+                    
+                    // If the sign is facing the same direction as the chest
+                    if (signData.getFacing() == chestFacing) {
+                        // Remove the sign
+                        frontBlock.setType(Material.AIR, false);
+                        if (config.isDebugEnabled()) {
+                            plugin.getLogger().info("Removed wall sign at " + frontBlock.getLocation() + 
+                                " facing " + chestFacing + " in front of chest at " + chestBlock.getLocation());
+                        }
+                    }
+                }
+            }
+            
+            // If we couldn't find a sign based on chest facing, check all directions
+            if (chestFacing == null) {
+                // Check all horizontal directions for attached wall signs
+                for (BlockFace face : new BlockFace[]{BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST}) {
+                    Block adjacentBlock = chestBlock.getRelative(face);
+                    if (isWallSign(adjacentBlock)) {
+                        org.bukkit.block.data.type.WallSign signData = 
+                            (org.bukkit.block.data.type.WallSign) adjacentBlock.getBlockData();
+                        
+                        // Check if the sign is facing the same direction as the direction from chest to sign
+                        if (signData.getFacing() == face) {
+                            // This sign is likely associated with our chest
+                            adjacentBlock.setType(Material.AIR, false);
+                            if (config.isDebugEnabled()) {
+                                plugin.getLogger().info("Removed wall sign at " + adjacentBlock.getLocation() + 
+                                    " facing " + face + " adjacent to chest at " + chestBlock.getLocation());
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Also check for signs directly above the chest (older versions might have placed them there)
+            Block aboveBlock = chestBlock.getRelative(BlockFace.UP);
+            if (aboveBlock.getType().name().endsWith("_SIGN")) {
+                aboveBlock.setType(Material.AIR, false);
+                if (config.isDebugEnabled()) {
+                    plugin.getLogger().info("Removed sign above chest at " + aboveBlock.getLocation());
+                }
             }
         }
         
@@ -272,8 +346,18 @@ public class ChestManager {
         
         // Notify player if provided
         if (player != null) {
-            player.sendMessage(config.getMessageChestRemoved());
+            player.sendMessage(ChatColor.translateAlternateColorCodes('&', config.getMessageChestRemoved()));
         }
+    }
+    
+    /**
+     * Checks if a block is a wall sign
+     * 
+     * @param block The block to check
+     * @return true if the block is a wall sign
+     */
+    private boolean isWallSign(Block block) {
+        return block.getBlockData() instanceof org.bukkit.block.data.type.WallSign;
     }
     
     /**
@@ -335,9 +419,13 @@ public class ChestManager {
                             // Notify player if they're online
                             Player owner = plugin.getServer().getPlayer(data.getOwnerUUID());
                             if (owner != null && owner.isOnline()) {
-                                owner.sendMessage("§c[FriendlyDeathChest] Your death chest at §f" + 
-                                    loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ() + 
-                                    " §chas expired!");
+                                String message = config.getMessageExpiryWarning()
+                                    .replace("{location}", formatLocation(loc))
+                                    .replace("{x}", String.valueOf(loc.getBlockX()))
+                                    .replace("{y}", String.valueOf(loc.getBlockY()))
+                                    .replace("{z}", String.valueOf(loc.getBlockZ()))
+                                    .replace("{time}", "0");
+                                owner.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
                             }
                         }
                     }
@@ -387,7 +475,7 @@ public class ChestManager {
                 // Only restore if there is experience to restore
                 if (storedExp > 0) {
                     player.giveExp(storedExp);
-                    player.sendMessage("§a[FriendlyDeathChest] You recovered " + storedExp + " experience points!");
+                    player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&a[FriendlyDeathChest] You recovered " + storedExp + " experience points!"));
                     
                     // Remove the stored experience to prevent getting it multiple times
                     container.remove(experienceKey);
@@ -477,10 +565,14 @@ public class ChestManager {
                         Player owner = plugin.getServer().getPlayer(chestData.getOwnerUUID());
                         if (owner != null && owner.isOnline()) {
                             // Send warning message
-                            String message = config.getExpiryWarningMessage()
-                                    .replace("{time}", String.valueOf(timeUntilExpiry / 60000)) // minutes
-                                    .replace("{location}", formatLocation(entry.getKey()));
-                            owner.sendMessage(message);
+                            Location loc = entry.getKey();
+                            String message = config.getMessageExpiryWarning()
+                                .replace("{location}", formatLocation(loc))
+                                .replace("{x}", String.valueOf(loc.getBlockX()))
+                                .replace("{y}", String.valueOf(loc.getBlockY()))
+                                .replace("{z}", String.valueOf(loc.getBlockZ()))
+                                .replace("{time}", String.valueOf(config.getExpiryWarningTime()));
+                            owner.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
                         }
                     }
                 }

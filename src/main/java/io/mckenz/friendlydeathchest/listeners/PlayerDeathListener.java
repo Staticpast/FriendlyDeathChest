@@ -22,7 +22,9 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -94,7 +96,10 @@ public class PlayerDeathListener implements Listener {
         // Send creation message
         if (config.sendCreationMessage()) {
             String message = config.getCreationMessage()
-                    .replace("{location}", formatLocation(chestLoc));
+                    .replace("{location}", formatLocation(chestLoc))
+                    .replace("{x}", String.valueOf(chestLoc.getBlockX()))
+                    .replace("{y}", String.valueOf(chestLoc.getBlockY()))
+                    .replace("{z}", String.valueOf(chestLoc.getBlockZ()));
             player.sendMessage(ChatColor.translateAlternateColorCodes('&', message));
         }
     }
@@ -152,7 +157,7 @@ public class PlayerDeathListener implements Listener {
     }
     
     /**
-     * Creates a sign above the chest
+     * Creates a sign on the front of the chest
      *
      * @param chestLocation The location of the chest
      * @param playerName The name of the player who died
@@ -163,30 +168,134 @@ public class PlayerDeathListener implements Listener {
             return;
         }
         
-        // Get the block above the chest
-        Block signBlock = chestLocation.getBlock().getRelative(BlockFace.UP);
+        // Get the chest block
+        Block chestBlock = chestLocation.getBlock();
+        
+        // Get the chest's facing direction if possible
+        BlockFace chestFacing = null;
+        if (chestBlock.getBlockData() instanceof org.bukkit.block.data.Directional) {
+            chestFacing = ((org.bukkit.block.data.Directional) chestBlock.getBlockData()).getFacing();
+        }
+        
+        // If we couldn't determine the chest's facing, use our priority order
+        if (chestFacing == null) {
+            // Determine the best direction to place the sign
+            chestFacing = determineSignDirection(chestBlock);
+            if (chestFacing == null) {
+                // If no valid direction found, don't place a sign
+                return;
+            }
+        }
+        
+        // Get the block in front of the chest
+        Block signBlock = chestBlock.getRelative(chestFacing);
         if (signBlock.getType() != Material.AIR) {
+            // If the block is not air, don't place a sign
             return;
         }
         
-        // Set the sign block
-        signBlock.setType(Material.OAK_SIGN);
+        // Set the wall sign block with correct orientation
+        Material signMaterial = getWallSignMaterial();
+        signBlock.setType(signMaterial);
+        
+        // Set the sign direction
+        org.bukkit.block.data.type.WallSign signData = 
+            (org.bukkit.block.data.type.WallSign) signBlock.getBlockData();
+        
+        // The sign should be attached to the chest and face outward
+        // So the sign's facing direction should be the same as the chest's facing
+        signData.setFacing(chestFacing);
+        signBlock.setBlockData(signData);
+        
+        // Log debug information if enabled
+        if (config.isDebugEnabled()) {
+            plugin.getLogger().info("Placed death chest sign at " + signBlock.getLocation() + 
+                " facing " + chestFacing + " in front of chest at " + chestLocation);
+        }
         
         // Update the sign text
         if (signBlock.getState() instanceof Sign) {
             Sign sign = (Sign) signBlock.getState();
+            
+            // Get current date for the date placeholder
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            String currentDate = dateFormat.format(new Date());
             
             // Format the text
             String[] lines = config.getSignText();
             for (int i = 0; i < lines.length && i < 4; i++) {
                 String line = lines[i]
                         .replace("{player}", playerName)
+                        .replace("{date}", currentDate)
                         .replace("&", "§");
                 sign.setLine(i, line);
             }
             
             sign.update();
         }
+    }
+    
+    /**
+     * Determines the best direction to place a sign based on surrounding blocks
+     *
+     * @param chestBlock The chest block
+     * @return The best direction to place the sign, or null if no valid direction
+     */
+    private BlockFace determineSignDirection(Block chestBlock) {
+        // First try to determine the chest's facing direction
+        if (chestBlock.getBlockData() instanceof org.bukkit.block.data.Directional) {
+            BlockFace chestFacing = ((org.bukkit.block.data.Directional) chestBlock.getBlockData()).getFacing();
+            
+            // Check if the block in front of the chest is air
+            Block frontBlock = chestBlock.getRelative(chestFacing);
+            if (frontBlock.getType() == Material.AIR) {
+                return chestFacing;
+            }
+        }
+        
+        // If we couldn't use the chest's facing, use our priority order
+        // Priority order for sign placement (south is most visible in default view)
+        BlockFace[] priorityOrder = new BlockFace[]{
+            BlockFace.SOUTH, BlockFace.EAST, BlockFace.NORTH, BlockFace.WEST
+        };
+        
+        // Check in priority order
+        for (BlockFace face : priorityOrder) {
+            Block adjacent = chestBlock.getRelative(face);
+            if (adjacent.getType() == Material.AIR) {
+                return face;
+            }
+        }
+        
+        // If no direction has air, return null
+        return null;
+    }
+    
+    /**
+     * Gets the appropriate wall sign material
+     *
+     * @return The wall sign material
+     */
+    private Material getWallSignMaterial() {
+        // Default to oak wall sign, but could be made configurable in the future
+        try {
+            // Try to get the configured sign material if it exists
+            String signType = config.getSignMaterial();
+            if (signType != null && !signType.isEmpty()) {
+                Material material = Material.valueOf(signType + "_WALL_SIGN");
+                if (material != null) {
+                    return material;
+                }
+            }
+        } catch (Exception e) {
+            // If any error occurs, fall back to oak
+            if (config.isDebugEnabled()) {
+                plugin.getLogger().warning("Error getting sign material: " + e.getMessage());
+            }
+        }
+        
+        // Default to oak wall sign
+        return Material.OAK_WALL_SIGN;
     }
     
     /**

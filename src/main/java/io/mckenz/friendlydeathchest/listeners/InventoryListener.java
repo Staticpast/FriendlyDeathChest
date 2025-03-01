@@ -102,8 +102,21 @@ public class InventoryListener implements Listener {
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    chestManager.removeChest(chestBlock, 
-                        event.getPlayer() instanceof Player ? (Player) event.getPlayer() : null);
+                    // Get the player who closed the inventory
+                    Player player = event.getPlayer() instanceof Player ? (Player) event.getPlayer() : null;
+                    
+                    // Remove the chest, sign, and hologram
+                    chestManager.removeChest(chestBlock, player);
+                    
+                    // Play additional effects to make it more noticeable
+                    if (player != null) {
+                        Location playerLoc = player.getLocation();
+                        playerLoc.getWorld().playSound(playerLoc, Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.2f);
+                    }
+                    
+                    if (config.isDebugEnabled()) {
+                        plugin.getLogger().info("Death chest removed after being emptied at " + chestBlock.getLocation());
+                    }
                 }
             }.runTask(plugin);
         }

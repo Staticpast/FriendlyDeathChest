@@ -49,8 +49,9 @@ enable-hologram: true
 # Text to display on the hologram
 # Available placeholders:
 # {player} - The player's name
-# {time} - Time remaining until the chest disappears
-hologram-text: "&c{player}'s Death Chest"
+# {time} - Time remaining until the chest disappears (shows minutes, or seconds in the last minute)
+# {date} - The date the chest was created (MM/dd/yyyy format)
+hologram-text: "&4{player}'s Death Chest &7({time})"
 
 # Whether to show the remaining time on the hologram
 show-time-remaining: true
@@ -59,14 +60,23 @@ show-time-remaining: true
 # Sign Settings
 # ======================================
 
-# Whether to place a sign on the death chest
+# Whether to place a sign on the front of the death chest
+# The sign will be placed as a wall sign attached to the chest
 enable-sign: true
 
-# Text to display on the sign (3 lines)
+# Material to use for the sign (OAK, SPRUCE, BIRCH, JUNGLE, ACACIA, DARK_OAK, CRIMSON, WARPED, MANGROVE, CHERRY, BAMBOO)
+# This will be used to determine the wall sign material (e.g., OAK will use OAK_WALL_SIGN)
+sign-material: OAK
+
+# Text to display on the sign (4 lines)
+# Available placeholders:
+# {player} - The player's name
+# {date} - The date the chest was created (MM/dd/yyyy format)
 sign:
-  line1: "Death Chest"
-  line2: "{player}"
-  line3: "Rest in peace"
+  line1: "&4Death Chest"
+  line2: "&9{player}"
+  line3: "&7Rest in peace"
+  line4: "&8{date}"
 
 # ======================================
 # Item Handling
@@ -90,11 +100,14 @@ excluded-items: []
 
 # Message to send to player when they die and a chest is created
 # Leave blank to disable
-death-message: "&cYour items have been stored in a chest at &f{x}, {y}, {z}"
+# {location} will be replaced with formatted location (e.g., x:100, y:64, z:-200 in world)
+death-message: "&c[FriendlyDeathChest] &fYour items have been stored in a chest at &e{location}"
 
 # Message to send to player when their chest is about to expire
 # Leave blank to disable
-expiry-warning-message: "&eYour death chest at &f{x}, {y}, {z} &ewill disappear in &f{time} minutes&e!"
+# {time} will be replaced with minutes or seconds remaining
+# {location} will be replaced with formatted location (e.g., x:100, y:64, z:-200 in world)
+expiry-warning-message: "&eYour death chest at &f{location} &ewill disappear in &f{time}&e!"
 
 # How many minutes before expiry to send the warning message
 expiry-warning-time: 5

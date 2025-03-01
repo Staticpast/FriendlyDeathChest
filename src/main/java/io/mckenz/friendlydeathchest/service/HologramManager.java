@@ -10,6 +10,8 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -114,9 +116,23 @@ public class HologramManager {
         // Replace placeholders
         text = text.replace("{player}", playerName);
         
+        // Add date placeholder
+        SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+        String currentDate = dateFormat.format(new Date());
+        text = text.replace("{date}", currentDate);
+        
         if (config.shouldShowTimeRemaining() && expiryTime > 0) {
-            long timeLeft = Math.max(0, (expiryTime - System.currentTimeMillis()) / 60000); // minutes
-            text = text.replace("{time}", String.valueOf(timeLeft));
+            long timeLeftMillis = Math.max(0, expiryTime - System.currentTimeMillis());
+            long timeLeftMinutes = timeLeftMillis / 60000; // minutes
+            
+            if (timeLeftMinutes > 0) {
+                // More than a minute remaining, show minutes
+                text = text.replace("{time}", String.valueOf(timeLeftMinutes));
+            } else {
+                // Less than a minute remaining, show seconds
+                long timeLeftSeconds = timeLeftMillis / 1000;
+                text = text.replace("{time}", timeLeftSeconds + " sec");
+            }
         }
         
         return text;
