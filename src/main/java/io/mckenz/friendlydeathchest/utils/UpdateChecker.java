@@ -52,12 +52,38 @@ public class UpdateChecker implements Listener {
                     return;
                 }
                 
+                // Normalize versions for logging
+                String normalizedCurrent = normalizeVersion(currentVersion);
+                String normalizedLatest = normalizeVersion(latestVersion);
+                
                 // Compare versions using semantic versioning
                 if (!versionsEqual(currentVersion, latestVersion)) {
-                    updateAvailable = true;
-                    plugin.getLogger().info("A new update is available: v" + latestVersion);
-                    plugin.getLogger().info("You are currently running: v" + currentVersion);
-                    plugin.getLogger().info("Download the latest version from: https://www.spigotmc.org/resources/" + resourceId);
+                    // Check if the latest version is actually newer
+                    String[] currentParts = normalizedCurrent.split("\\.");
+                    String[] latestParts = normalizedLatest.split("\\.");
+                    
+                    boolean isNewer = false;
+                    for (int i = 0; i < Math.min(currentParts.length, latestParts.length); i++) {
+                        int currentPart = Integer.parseInt(currentParts[i]);
+                        int latestPart = Integer.parseInt(latestParts[i]);
+                        
+                        if (latestPart > currentPart) {
+                            isNewer = true;
+                            break;
+                        } else if (latestPart < currentPart) {
+                            // Current version is actually newer than "latest"
+                            break;
+                        }
+                    }
+                    
+                    if (isNewer) {
+                        updateAvailable = true;
+                        plugin.getLogger().info("A new update is available: v" + latestVersion);
+                        plugin.getLogger().info("You are currently running: v" + currentVersion);
+                        plugin.getLogger().info("Download the latest version from: https://www.spigotmc.org/resources/" + resourceId);
+                    } else {
+                        plugin.getLogger().info("You are running the latest version: v" + currentVersion);
+                    }
                 } else {
                     plugin.getLogger().info("You are running the latest version: v" + currentVersion);
                 }
@@ -108,8 +134,8 @@ public class UpdateChecker implements Listener {
      * @return The normalized version string
      */
     private String normalizeVersion(String version) {
-        // Remove 'v' prefix if present
-        if (version.startsWith("v")) {
+        // Remove all 'v' prefixes (handles cases like 'vv1.1.0')
+        while (version.startsWith("v")) {
             version = version.substring(1);
         }
         
@@ -159,9 +185,9 @@ public class UpdateChecker implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (updateAvailable && notifyAdmins && event.getPlayer().hasPermission("friendlydeathchest.admin")) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                event.getPlayer().sendMessage("§8[§cFriendlyDeathChest§8] §7A new update is available: §cv" + latestVersion);
-                event.getPlayer().sendMessage("§8[§cFriendlyDeathChest§8] §7You are currently running: §cv" + plugin.getDescription().getVersion());
-                event.getPlayer().sendMessage("§8[§cFriendlyDeathChest§8] §7Download the latest version from: §chttps://www.spigotmc.org/resources/" + resourceId);
+                event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', "&8[&cFriendlyDeathChest&8] &7A new update is available: &cv" + latestVersion));
+                event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', "&8[&cFriendlyDeathChest&8] &7You are currently running: &cv" + plugin.getDescription().getVersion()));
+                event.getPlayer().sendMessage(ChatColor.translateAlternateColorCodes('&', "&8[&cFriendlyDeathChest&8] &7Download the latest version from: &chttps://www.spigotmc.org/resources/" + resourceId));
             }, 40L); // 2 seconds delay
         }
     }

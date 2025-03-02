@@ -134,7 +134,7 @@ respect-protection-plugins: true
 
 # Debug mode - when enabled, additional information will be printed to the console
 # Only enable this when troubleshooting issues
-debug: true
+debug: false
 
 # Fine-tuning for initial chest location search (before max-search-radius is used)
 # A radius of 1 will search in a 3x3x3 area
