@@ -2,6 +2,7 @@ package io.mckenz.friendlydeathchest.utils;
 
 import io.mckenz.friendlydeathchest.FriendlyDeathChest;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -12,17 +13,17 @@ import java.net.URL;
 import java.util.Scanner;
 
 /**
- * Utility class for checking for plugin updates
+ * Checks for updates to the plugin
  */
 public class UpdateChecker implements Listener {
     private final FriendlyDeathChest plugin;
     private final int resourceId;
     private final boolean notifyAdmins;
-    private String latestVersion;
     private boolean updateAvailable = false;
+    private String latestVersion = null;
 
     /**
-     * Creates a new update checker
+     * Creates a new UpdateChecker instance
      * 
      * @param plugin The plugin instance
      * @param resourceId The SpigotMC resource ID
@@ -33,20 +34,14 @@ public class UpdateChecker implements Listener {
         this.resourceId = resourceId;
         this.notifyAdmins = notifyAdmins;
         
-        if (notifyAdmins) {
-            plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        }
+        // Register this class as an event listener
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
-
+    
     /**
-     * Checks for updates
+     * Checks for updates to the plugin
      */
     public void checkForUpdates() {
-        if (resourceId == 0) {
-            plugin.getLogger().warning("Resource ID is not set. Update checking is disabled.");
-            return;
-        }
-        
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 String currentVersion = plugin.getDescription().getVersion();
@@ -57,11 +52,8 @@ public class UpdateChecker implements Listener {
                     return;
                 }
                 
-                // Normalize versions for comparison
-                String normalizedCurrent = normalizeVersion(currentVersion);
-                String normalizedLatest = normalizeVersion(latestVersion);
-                
-                if (!normalizedCurrent.equalsIgnoreCase(normalizedLatest)) {
+                // Compare versions using semantic versioning
+                if (!versionsEqual(currentVersion, latestVersion)) {
                     updateAvailable = true;
                     plugin.getLogger().info("A new update is available: v" + latestVersion);
                     plugin.getLogger().info("You are currently running: v" + currentVersion);
@@ -95,6 +87,22 @@ public class UpdateChecker implements Listener {
     }
     
     /**
+     * Compare two version strings for equality
+     * 
+     * @param version1 The first version string
+     * @param version2 The second version string
+     * @return True if the versions are equal, false otherwise
+     */
+    private boolean versionsEqual(String version1, String version2) {
+        // Normalize both versions
+        String normalizedVersion1 = normalizeVersion(version1);
+        String normalizedVersion2 = normalizeVersion(version2);
+        
+        // Simple string comparison after normalization
+        return normalizedVersion1.equals(normalizedVersion2);
+    }
+    
+    /**
      * Normalize a version string for comparison
      * @param version The version string to normalize
      * @return The normalized version string
@@ -111,7 +119,17 @@ public class UpdateChecker implements Listener {
             version = version.substring(0, dashIndex);
         }
         
-        return version.trim();
+        // Trim any whitespace
+        version = version.trim();
+        
+        // Ensure consistent format for comparison
+        // For example, convert "1.1" to "1.1.0" if needed
+        String[] parts = version.split("\\.");
+        if (parts.length == 2) {
+            version = version + ".0";
+        }
+        
+        return version;
     }
 
     /**
