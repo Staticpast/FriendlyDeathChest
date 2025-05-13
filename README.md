@@ -66,12 +66,9 @@ For detailed configuration options, see the comments in the generated config.yml
 - Spigot/Paper 1.21.4
 - Java 21+
 
-## Development
-To build the plugin yourself:
+## Used By
 
-1. Clone the repository
-2. Run `mvn clean package`
-3. Find the built jar in the `target` folder
+[SuegoFaults](https://suegofaults.com) - A long-running adult Minecraft server where FriendlyDeathChest protects player loot and keeps deaths drama-free.
 
 ## Support
 If you find this plugin helpful, consider [buying me a coffee](https://www.paypal.com/paypalme/mckenzio) ☕
