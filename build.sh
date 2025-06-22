@@ -677,7 +677,7 @@ main() {
                     # Create GitHub release
                     local jar_file="$PLUGINS_DIR/${PLUGIN_ARTIFACT_ID}-${new_version}.jar"
                     if [[ -f "$jar_file" ]]; then
-                        create_github_release "$new_version" "$jar_file"
+                        create_github_release "$new_version" "$jar_file" "$force_release"
                     else
                         log_error "JAR file not found for GitHub release: $jar_file"
                     fi
