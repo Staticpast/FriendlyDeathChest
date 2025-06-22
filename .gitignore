@@ -31,4 +31,5 @@ Thumbs.db
 
 # Build script cache files
 .last_build_version
-.last_build_hash 
+.last_build_hash
+.release_notes_temp 

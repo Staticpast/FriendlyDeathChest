@@ -18,6 +18,10 @@ readonly CHANGE_CACHE_FILE="$PROJECT_DIR/.last_build_hash"
 readonly PLUGIN_NAME="FriendlyDeathChest"
 readonly PLUGIN_ARTIFACT_ID="FriendlyDeathChest"
 
+# GitHub configuration
+readonly GITHUB_REPO="Staticpast/FriendlyDeathChest"
+readonly RELEASE_NOTES_FILE="$PROJECT_DIR/.release_notes_temp"
+
 # --- Logging Functions ---
 log_info() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $*"
@@ -47,6 +51,15 @@ check_dependencies() {
     
     if ! command -v git >/dev/null 2>&1; then
         missing_deps+=("git")
+    fi
+    
+    if ! command -v gh >/dev/null 2>&1; then
+        log_warning "GitHub CLI (gh) not found. Installing via Homebrew..."
+        if command -v brew >/dev/null 2>&1; then
+            brew install gh
+        else
+            missing_deps+=("gh (GitHub CLI)")
+        fi
     fi
     
     if ! command -v xmlstarlet >/dev/null 2>&1; then
@@ -226,29 +239,189 @@ load_version_cache() {
     fi
 }
 
+get_git_tag_for_version() {
+    local version="$1"
+    echo "v$version"
+}
+
+get_previous_version_tag() {
+    git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo ""
+}
+
+generate_release_notes() {
+    local version="$1"
+    local previous_tag="$2"
+    
+    cat > "$RELEASE_NOTES_FILE" << EOF
+## What's New
+*Add your release notes here*
+
+## Requirements
+- Spigot/Paper 1.21.6+
+- Java 21+
+
+## Full Changelog
+https://github.com/$GITHUB_REPO/compare/$previous_tag...v$version
+EOF
+}
+
+create_github_release() {
+    local version="$1"
+    local jar_file="$2"
+    local tag="v$version"
+    local release_title="$PLUGIN_NAME $tag"
+    
+    log_info "Creating GitHub release: $release_title"
+    
+    # Check if we're in a git repository
+    if ! git rev-parse --git-dir >/dev/null 2>&1; then
+        log_error "Not in a git repository. Cannot create GitHub release."
+        return 1
+    fi
+    
+    # Check if user is authenticated with GitHub CLI
+    if ! gh auth status >/dev/null 2>&1; then
+        log_error "Not authenticated with GitHub CLI. Run 'gh auth login' first."
+        return 1
+    fi
+    
+    # Check if release already exists
+    if gh release view "$tag" >/dev/null 2>&1; then
+        log_warning "GitHub release $tag already exists"
+        log_info "You can view it at: https://github.com/$GITHUB_REPO/releases/tag/$tag"
+        return 0
+    fi
+    
+    # Get previous version for changelog
+    local previous_tag
+    previous_tag=$(get_previous_version_tag)
+    
+    # Generate release notes
+    generate_release_notes "$version" "$previous_tag"
+    
+    # Open release notes in editor for user to edit
+    if [[ -n "${EDITOR:-}" ]]; then
+        log_info "Opening release notes in $EDITOR for editing..."
+        $EDITOR "$RELEASE_NOTES_FILE"
+    elif command -v nano >/dev/null 2>&1; then
+        log_info "Opening release notes in nano for editing..."
+        nano "$RELEASE_NOTES_FILE"
+    else
+        log_warning "No editor found. Using generated release notes as-is."
+        log_info "You can edit the release notes manually at: $RELEASE_NOTES_FILE"
+    fi
+    
+    # Determine target commit - use existing tag if it exists, otherwise current HEAD
+    local target_commit
+    if git tag -l "$tag" | grep -q "^$tag$"; then
+        target_commit=$(git rev-list -n 1 "$tag")
+        log_info "Using existing tag $tag (commit: ${target_commit:0:7})"
+    else
+        target_commit=$(git rev-parse HEAD)
+        log_info "Using current HEAD (commit: ${target_commit:0:7})"
+    fi
+    
+    # Create the release
+    if gh release create "$tag" \
+        --title "$release_title" \
+        --notes-file "$RELEASE_NOTES_FILE" \
+        --target "$target_commit" \
+        "$jar_file"; then
+        
+        log_success "GitHub release created successfully: $release_title"
+        log_info "Release URL: https://github.com/$GITHUB_REPO/releases/tag/$tag"
+        
+        # Clean up temporary file
+        rm -f "$RELEASE_NOTES_FILE"
+        
+        return 0
+    else
+        log_error "Failed to create GitHub release"
+        return 1
+    fi
+}
+
+commit_and_tag_version() {
+    local version="$1"
+    local tag="v$version"
+    
+    log_info "Committing version changes and creating git tag..."
+    
+    # Check if there are changes to commit
+    if git diff --quiet && git diff --cached --quiet; then
+        log_info "No changes to commit"
+    else
+        # Add version-related files
+        git add pom.xml
+        git add src/main/resources/plugin.yml 2>/dev/null || true
+        
+        # Commit with conventional commit format
+        git commit -m "chore(release): bump version to $version" || {
+            log_warning "Failed to commit version changes"
+        }
+    fi
+    
+    # Check if tag already exists
+    if git tag -l "$tag" | grep -q "^$tag$"; then
+        log_warning "Git tag $tag already exists"
+        
+        # Check if GitHub release exists
+        if gh release view "$tag" >/dev/null 2>&1; then
+            log_info "GitHub release $tag already exists, skipping"
+            return 0
+        else
+            log_info "Git tag exists but GitHub release doesn't - will create release using existing tag"
+            return 0
+        fi
+    fi
+    
+    # Create and push tag
+    if git tag -a "$tag" -m "$PLUGIN_NAME $tag"; then
+        log_info "Created git tag: $tag"
+        
+        # Push tag to remote
+        if git push origin "$tag" 2>/dev/null; then
+            log_info "Pushed tag to remote: $tag"
+        else
+            log_warning "Failed to push tag to remote (this is okay if working locally)"
+        fi
+    else
+        log_error "Failed to create git tag: $tag"
+        return 1
+    fi
+}
+
 show_usage() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
 Build and deploy the FriendlyDeathChest plugin with intelligent change detection.
 
-OPTIONS:
-    -t, --type TYPE     Version increment type: major, minor, patch (default: patch)
-    -v, --version VER   Set specific version instead of incrementing
-    -n, --no-increment  Build and deploy without incrementing version
-    -f, --force         Force build even if no changes detected
-    -c, --check-only    Only check for changes, don't build or deploy
-    -b, --build-only    Build plugin but don't deploy to server
-    -h, --help          Show this help message
+ OPTIONS:
+     -t, --type TYPE     Version increment type: major, minor, patch (default: patch)
+     -v, --version VER   Set specific version instead of incrementing
+     -n, --no-increment  Build and deploy without incrementing version
+     -f, --force         Force build even if no changes detected
+     -c, --check-only    Only check for changes, don't build or deploy
+     -b, --build-only    Build plugin but don't deploy to server
+     -r, --release       Create GitHub release after successful build
+     -g, --git-only      Only commit and tag version, don't create GitHub release
+     --force-release     Force recreate GitHub release even if it exists
+     --clean-tag VER     Delete existing git tag and recreate it
+     -h, --help          Show this help message
 
-EXAMPLES:
-    $0                  # Auto-detect changes and increment patch version if needed
-    $0 -t minor         # Force minor version increment and build
-    $0 -v 2.1.0         # Set version to 2.1.0 and build
-    $0 -f               # Force build even without changes
-    $0 -c               # Check for changes only
-    $0 -b               # Build plugin but don't deploy
-    $0 -b -f            # Force build without deployment
+ EXAMPLES:
+     $0                  # Auto-detect changes and increment patch version if needed
+     $0 -t minor         # Force minor version increment and build
+     $0 -v 2.1.0         # Set version to 2.1.0 and build
+     $0 -f               # Force build even without changes
+     $0 -c               # Check for changes only
+     $0 -b               # Build plugin but don't deploy
+     $0 -r               # Build, deploy, and create GitHub release
+     $0 -g               # Build, deploy, and create git tag (no GitHub release)
+     $0 --clean-tag v1.1.5 -r  # Delete existing tag and recreate release
+     $0 --force-release -r      # Force recreate GitHub release
+     $0 -b -f            # Force build without deployment
 
 CONFIGURATION:
     Plugin name: $PLUGIN_NAME
@@ -269,6 +442,10 @@ main() {
     local force_build=false
     local check_only=false
     local build_only=false
+    local create_release=false
+    local git_only=false
+    local force_release=false
+    local clean_tag=""
     
     # Parse command line arguments
     while [[ $# -gt 0 ]]; do
@@ -301,6 +478,22 @@ main() {
                 build_only=true
                 shift
                 ;;
+            -r|--release)
+                create_release=true
+                shift
+                ;;
+            -g|--git-only)
+                git_only=true
+                shift
+                ;;
+            --force-release)
+                force_release=true
+                shift
+                ;;
+            --clean-tag)
+                clean_tag="$2"
+                shift 2
+                ;;
             -h|--help)
                 show_usage
                 exit 0
@@ -314,6 +507,32 @@ main() {
     done
     
     log_info "Starting FriendlyDeathChest plugin build and deployment..."
+    
+    # Handle clean tag option first
+    if [[ -n "$clean_tag" ]]; then
+        log_info "Cleaning up existing tag: $clean_tag"
+        
+        # Delete local tag
+        if git tag -d "$clean_tag" 2>/dev/null; then
+            log_info "Deleted local tag: $clean_tag"
+        else
+            log_info "Local tag $clean_tag doesn't exist"
+        fi
+        
+        # Delete remote tag
+        if git push origin --delete "$clean_tag" 2>/dev/null; then
+            log_info "Deleted remote tag: $clean_tag"
+        else
+            log_info "Remote tag $clean_tag doesn't exist or couldn't be deleted"
+        fi
+        
+        # Delete GitHub release if it exists
+        if gh release delete "$clean_tag" --yes 2>/dev/null; then
+            log_info "Deleted GitHub release: $clean_tag"
+        else
+            log_info "GitHub release $clean_tag doesn't exist"
+        fi
+    fi
     
     # Check dependencies
     check_dependencies
@@ -436,6 +655,22 @@ main() {
         
         if [[ "$changes_detected" == true ]]; then
             echo "4. Changes were detected and deployed"
+        fi
+        
+        # Handle Git operations and GitHub release
+        if [[ "$create_release" == true || "$git_only" == true ]]; then
+            # Commit and tag version
+            if commit_and_tag_version "$new_version"; then
+                if [[ "$create_release" == true ]]; then
+                    # Create GitHub release
+                    local jar_file="$PLUGINS_DIR/${PLUGIN_ARTIFACT_ID}-${new_version}.jar"
+                    if [[ -f "$jar_file" ]]; then
+                        create_github_release "$new_version" "$jar_file"
+                    else
+                        log_error "JAR file not found for GitHub release: $jar_file"
+                    fi
+                fi
+            fi
         fi
     fi
 }
