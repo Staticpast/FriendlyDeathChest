@@ -268,6 +268,7 @@ EOF
 create_github_release() {
     local version="$1"
     local jar_file="$2"
+    local force_release="${3:-false}"
     local tag="v$version"
     local release_title="$PLUGIN_NAME $tag"
     
@@ -285,11 +286,22 @@ create_github_release() {
         return 1
     fi
     
-    # Check if release already exists
+    # Check if release already exists (unless force release is enabled)
     if gh release view "$tag" >/dev/null 2>&1; then
-        log_warning "GitHub release $tag already exists"
-        log_info "You can view it at: https://github.com/$GITHUB_REPO/releases/tag/$tag"
-        return 0
+        if [[ "$force_release" == true ]]; then
+            log_info "GitHub release $tag already exists, but force release is enabled - deleting it"
+            if gh release delete "$tag" --yes; then
+                log_info "Deleted existing GitHub release: $tag"
+            else
+                log_error "Failed to delete existing GitHub release: $tag"
+                return 1
+            fi
+        else
+            log_warning "GitHub release $tag already exists"
+            log_info "You can view it at: https://github.com/$GITHUB_REPO/releases/tag/$tag"
+            log_info "Use --force-release to recreate it"
+            return 0
+        fi
     fi
     
     # Get previous version for changelog
