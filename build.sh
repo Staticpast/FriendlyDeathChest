@@ -158,6 +158,7 @@ commit_and_tag() {
     git commit -m "chore(release): v$v" || true
     git tag -a "v$v" -m "$PLUGIN_NAME v$v" || true
     git push origin "v$v" || true
+    git push || true
 }
 
 create_github_release() {
